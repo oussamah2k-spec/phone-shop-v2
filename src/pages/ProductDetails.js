@@ -3,8 +3,6 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaWhatsapp } from "react-icons/fa";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
 import { subscribeCarById } from "../firebase/cars";
 import Navbar from "../components/Navbar";
 import ProductGallery from "../components/ProductGallery";
@@ -33,30 +31,6 @@ function formatCurrency(value) {
     currency: "USD",
     maximumFractionDigits: 2,
   }).format(amount);
-}
-
-function parseStoredDate(dateValue) {
-  if (!dateValue) {
-    return null;
-  }
-
-  const [year, month, day] = String(dateValue).split("-").map((part) => Number.parseInt(part, 10));
-  if (!year || !month || !day) {
-    return null;
-  }
-
-  return new Date(year, month - 1, day);
-}
-
-function formatDateForStorage(dateValue) {
-  if (!(dateValue instanceof Date) || Number.isNaN(dateValue.getTime())) {
-    return "";
-  }
-
-  const year = String(dateValue.getFullYear());
-  const month = String(dateValue.getMonth() + 1).padStart(2, "0");
-  const day = String(dateValue.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 }
 
 function parseStockQuantity(stockValue) {
@@ -286,8 +260,6 @@ function ProductDetails() {
     return days > 0 ? days : 0;
   }, [checkInDate, checkOutDate]);
   const bookingTotalPrice = useMemo(() => priceNumber * bookingDays, [priceNumber, bookingDays]);
-  const selectedCheckInDate = useMemo(() => parseStoredDate(checkInDate), [checkInDate]);
-  const selectedCheckOutDate = useMemo(() => parseStoredDate(checkOutDate), [checkOutDate]);
   const hasInvalidDateRange = useMemo(() => {
     if (!checkInDate || !checkOutDate) {
       return false;
@@ -490,16 +462,11 @@ function ProductDetails() {
                 <span className="storefront-field-label">Pick-up</span>
                 <div className="storefront-field-wrap">
                   <span className="storefront-field-icon" aria-hidden="true">📅</span>
-                  <DatePicker
-                    selected={selectedCheckInDate}
-                    onChange={(date) => setCheckInDate(formatDateForStorage(date))}
-                    selectsStart
-                    startDate={selectedCheckInDate}
-                    endDate={selectedCheckOutDate}
-                    dateFormat="MM/dd/yyyy"
-                    placeholderText="MM/DD/YYYY"
+                  <input
+                    type="date"
+                    value={checkInDate}
+                    onChange={(event) => setCheckInDate(event.target.value)}
                     className="storefront-datepicker-input"
-                    calendarClassName="storefront-datepicker-calendar"
                   />
                 </div>
               </label>
@@ -508,17 +475,12 @@ function ProductDetails() {
                 <span className="storefront-field-label">Return</span>
                 <div className="storefront-field-wrap">
                   <span className="storefront-field-icon" aria-hidden="true">📅</span>
-                  <DatePicker
-                    selected={selectedCheckOutDate}
-                    onChange={(date) => setCheckOutDate(formatDateForStorage(date))}
-                    selectsEnd
-                    startDate={selectedCheckInDate}
-                    endDate={selectedCheckOutDate}
-                    minDate={selectedCheckInDate || undefined}
-                    dateFormat="MM/dd/yyyy"
-                    placeholderText="MM/DD/YYYY"
+                  <input
+                    type="date"
+                    value={checkOutDate}
+                    onChange={(event) => setCheckOutDate(event.target.value)}
+                    min={checkInDate || undefined}
                     className="storefront-datepicker-input"
-                    calendarClassName="storefront-datepicker-calendar"
                   />
                 </div>
               </label>
