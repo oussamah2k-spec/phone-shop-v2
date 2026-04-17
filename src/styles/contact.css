@@ -1,0 +1,401 @@
+/* ================================================================
+   CONTACT SECTION — BIZZINE CARS
+   Premium dark luxury UI with glassmorphism
+   ================================================================ */
+
+/* Section shell */
+.contact-section {
+  background: #0b0b0b;
+  padding: clamp(60px, 8vw, 100px) clamp(20px, 5vw, 60px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle radial glow backdrop */
+.contact-section::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  left: -120px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255, 44, 44, 0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.contact-section::after {
+  content: "";
+  position: absolute;
+  bottom: -100px;
+  right: -100px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 44, 44, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Inner container */
+.contact-inner {
+  max-width: 1160px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+}
+
+/* ----------------------------------------------------------------
+   Header
+   ---------------------------------------------------------------- */
+.contact-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.contact-kicker {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+}
+
+.contact-title {
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.15;
+}
+
+.contact-subtitle {
+  font-size: clamp(18px, 2vw, 22px);
+  color: #cfcfcf;
+  font-weight: 500;
+  max-width: 520px;
+  margin: 0;
+  line-height: 1.65;
+}
+
+.contact-subtitle strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ----------------------------------------------------------------
+   2-column grid
+   ---------------------------------------------------------------- */
+.contact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: stretch;
+}
+
+/* ----------------------------------------------------------------
+   LEFT — Contact blocks
+   ---------------------------------------------------------------- */
+.contact-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 28px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.4);
+}
+
+/* Info block */
+.contact-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(10px);
+  cursor: default;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.contact-block:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 44, 44, 0.32);
+  box-shadow: 0 10px 30px rgba(255, 44, 44, 0.2);
+}
+
+.contact-block-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff2c2c, #ff6b6b);
+  box-shadow: 0 8px 20px rgba(255, 44, 44, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+  font-size: 1rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.contact-block:hover .contact-block-icon {
+  transform: scale(1.05);
+  box-shadow: 0 10px 24px rgba(255, 44, 44, 0.38);
+}
+
+.contact-block-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.contact-block-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+  margin: 0;
+}
+
+.contact-block-text {
+  font-size: 16px;
+  color: #cfcfcf;
+  margin: 4px 0 0;
+  line-height: 1.6;
+}
+
+.contact-block-text strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.contact-block-link {
+  display: inline-block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #ffffff;
+  text-decoration: none;
+  margin-top: 4px;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.contact-block-link:hover {
+  color: #ff8a8a;
+  transform: translateX(1px);
+}
+
+.contact-block-sublink {
+  display: inline-block;
+  font-size: 0.9rem;
+  color: #9a9a9a;
+  text-decoration: none;
+  margin-top: 4px;
+  transition: color 0.2s ease;
+}
+
+.contact-block-sublink:hover { color: #cfcfcf; }
+
+/* Divider */
+.contact-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.04);
+  margin: -2px 8px 0;
+}
+
+/* ----------------------------------------------------------------
+   RIGHT — Map
+   ---------------------------------------------------------------- */
+.contact-map-wrap {
+  position: relative;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+  min-height: 420px;
+  display: flex;
+  flex-direction: column;
+}
+
+.contact-map-iframe {
+  flex: 1;
+  width: 100%;
+  min-height: 420px;
+  border: none;
+  display: block;
+  filter: brightness(0.9) contrast(1.05);
+}
+
+.contact-map-badge {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 15, 15, 0.92);
+  border: 1px solid rgba(255, 44, 44, 0.3);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.contact-map-badge svg { color: #ff2c2c; flex-shrink: 0; }
+
+.contact-map-cta,
+.contact-maps-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 77, 77, 0.45);
+  background: linear-gradient(135deg, #ff2c2c, #c91d1d);
+  box-shadow: 0 10px 26px rgba(201, 29, 29, 0.32);
+  font-weight: 700;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.contact-map-cta:hover,
+.contact-maps-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(201, 29, 29, 0.45);
+}
+
+.contact-maps-button {
+  margin-top: 6px;
+  width: fit-content;
+  padding: 10px 14px;
+  font-size: 0.84rem;
+}
+
+.contact-map-cta {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+}
+
+/* ----------------------------------------------------------------
+   Floating WhatsApp FAB
+   ---------------------------------------------------------------- */
+.contact-whatsapp-fab {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 28px rgba(37, 211, 102, 0.4);
+  text-decoration: none;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.contact-whatsapp-fab:hover {
+  transform: scale(1.1);
+  box-shadow: 0 10px 36px rgba(37, 211, 102, 0.6);
+}
+
+/* Pulse ping ring */
+.contact-whatsapp-fab-ping {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(37, 211, 102, 0.6);
+  animation: contact-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes contact-ping {
+  0%   { transform: scale(1);   opacity: 0.8; }
+  70%  { transform: scale(1.55); opacity: 0; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+
+@media (max-width: 900px) {
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .contact-map-wrap,
+  .contact-map-iframe {
+    min-height: 320px;
+  }
+
+  .contact-map-cta {
+    top: auto;
+    right: auto;
+    left: 50%;
+    bottom: 58px;
+    transform: translateX(-50%);
+    white-space: nowrap;
+  }
+
+  .contact-map-cta:hover {
+    transform: translateX(-50%) translateY(-2px);
+  }
+}
+
+@media (max-width: 600px) {
+  .contact-section {
+    padding: 50px 16px;
+  }
+
+  .contact-left {
+    padding: 18px 14px;
+  }
+
+  .contact-map-wrap,
+  .contact-map-iframe {
+    min-height: 260px;
+  }
+
+  .contact-map-badge {
+    bottom: 12px;
+    font-size: 0.72rem;
+    padding: 6px 12px;
+    max-width: calc(100% - 24px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .contact-map-cta {
+    bottom: 48px;
+    width: calc(100% - 24px);
+    font-size: 0.78rem;
+    padding: 9px 12px;
+  }
+
+  .contact-whatsapp-fab {
+    width: 50px;
+    height: 50px;
+    right: 16px;
+    bottom: 16px;
+  }
+}
