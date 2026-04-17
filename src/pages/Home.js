@@ -592,7 +592,7 @@ export default function Home() {
           <nav className="home-nav-links">
             <Link to="/" className="home-nav-link">Home</Link>
             <Link to="/store" className="home-nav-link">Cars</Link>
-            {isAuthenticated && (
+            {isAuthenticated && isAuthorizedAdmin && (
               <motion.div
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
