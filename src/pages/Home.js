@@ -755,7 +755,7 @@ export default function Home() {
                       </p>
                       <div className="home-car-footer">
                         <div className="home-car-price">
-                          <span className="home-car-price-cur">$</span>
+                          <span className="home-car-price-cur">DH</span>
                           <span className="home-car-price-amt">{getCarPrice(car)}</span>
                           <span className="home-car-price-per">/ day</span>
                         </div>

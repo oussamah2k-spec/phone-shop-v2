@@ -11,11 +11,8 @@ const whatsappNumber = "212781330622";
 const CHECKOUT_PLACEHOLDER_IMAGE = "/placeholder.png";
 
 function formatMoney(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(value);
+  const amount = Number.isFinite(Number(value)) ? Number(value) : 0;
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount)} DH`;
 }
 
 function normalizeOrderItems(items) {
@@ -199,7 +196,7 @@ function Checkout() {
     const returnDate = form.checkOutDate || "N/A";
     const totalPrice = Number.isFinite(Number(total)) ? Number(total).toFixed(2) : "0.00";
 
-    const message = `Hello, I want to book a car:\n\nName: ${name}\nPhone: ${phone}\nCar: ${carName}\nPick-up: ${pickupDate}\nReturn: ${returnDate}\nTotal Price: $${totalPrice}`;
+    const message = `Hello, I want to book a car:\n\nName: ${name}\nPhone: ${phone}\nCar: ${carName}\nPick-up: ${pickupDate}\nReturn: ${returnDate}\nTotal Price: ${totalPrice} DH`;
     const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
 
     window.open(url, "_blank", "noopener,noreferrer");

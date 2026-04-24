@@ -79,6 +79,15 @@ function mapLegacyBrandToCarType(brandValue) {
   return String(brandValue || DEFAULT_CAR_TYPE);
 }
 
+function formatPriceLabel(priceValue) {
+  const normalizedValue = String(priceValue ?? "").replace(/\$/g, "").trim();
+  if (!normalizedValue) {
+    return "0 DH";
+  }
+
+  return /\bDH\b/i.test(normalizedValue) ? normalizedValue : `${normalizedValue} DH`;
+}
+
 function getDefaultImageDescription(index, carName = "Car") {
   return DEFAULT_IMAGE_DESCRIPTIONS[index] || `${carName} view ${index + 1}`;
 }
@@ -1465,9 +1474,9 @@ function Admin() {
                           {product.featured && <span className="saas-inline-badge">Featured</span>}
                         </td>
                         <td>
-                          <strong>{product.price || "$0"}</strong>
+                          <strong>{formatPriceLabel(product.price)}</strong>
                           {product.oldPrice && (
-                            <p className="old-price">was {product.oldPrice}</p>
+                            <p className="old-price">was {formatPriceLabel(product.oldPrice)}</p>
                           )}
                         </td>
                         <td>{mapLegacyBrandToCarType(product.brand)}</td>

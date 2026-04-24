@@ -17,11 +17,7 @@ function parsePriceNumber(priceValue) {
 
 function formatMoney(value) {
   const amount = Number.isFinite(Number(value)) ? Number(value) : 0;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount)} DH`;
 }
 
 function formatDateTime(value) {
@@ -91,7 +87,7 @@ const CartItemRow = memo(function CartItemRow({ item, availableStock, onDecrease
 
       <div className="cart-info">
         <h3>{safeName}</h3>
-        <p className="price">${safePrice} / day</p>
+        <p className="price">{safePrice} DH / day</p>
         {checkInDate !== "N/A" && (
           <p className="cart-item-dates">Pick-up: {checkInDate} → Return: {checkOutDate}</p>
         )}

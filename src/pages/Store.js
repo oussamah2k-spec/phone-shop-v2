@@ -463,9 +463,9 @@ const ProductCard = memo(function ProductCard({ product, onBookNow, index = 0, c
         {/* Product Actions */}
         <div className="product-actions">
           <div className="product-pricing premium-pricing-block">
-            <div className="product-price price-inline">${priceNumber} / day</div>
+            <div className="product-price price-inline">{priceNumber} DH / day</div>
             {hasDiscount && (
-              <p className="product-old-price">${oldPriceNumber} / day</p>
+              <p className="product-old-price">{oldPriceNumber} DH / day</p>
             )}
           </div>
           <button

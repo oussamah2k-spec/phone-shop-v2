@@ -6,11 +6,8 @@ import Navbar from "../components/Navbar";
 import { db } from "../firebase/firebase";
 
 function formatMoney(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(Number(value) || 0);
+  const amount = Number(value) || 0;
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount)} DH`;
 }
 
 function AffiliateDashboard() {

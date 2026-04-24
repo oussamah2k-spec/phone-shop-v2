@@ -61,11 +61,7 @@ function parsePriceNumber(priceValue) {
 
 function formatCurrency(value) {
   const amount = Number.isFinite(Number(value)) ? Number(value) : 0;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 2,
-  }).format(amount);
+  return `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(amount)} DH`;
 }
 
 function parseStockQuantity(stockValue) {
