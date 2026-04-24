@@ -40,9 +40,6 @@ export default function OrderConfirmation() {
     const query = new URLSearchParams(location.search);
     const token = query.get("token") || "";
 
-    console.log("Booking ID:", id);
-    console.log("Token:", token);
-
     const loadOrder = async () => {
       try {
         setLoading(true);

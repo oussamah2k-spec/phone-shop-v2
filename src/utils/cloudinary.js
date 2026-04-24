@@ -13,8 +13,6 @@ export const uploadToCloudinary = async (file) => {
 
   const data = await res.json();
 
-  console.log("Cloudinary response:", data);
-
   if (!data.secure_url) {
     throw new Error(data.error?.message || "Upload failed");
   }

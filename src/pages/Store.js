@@ -1,7 +1,7 @@
 import "../styles/App.css";
-import { memo, useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { collection, getDocs } from "firebase/firestore";
 import {
   FaBolt,
@@ -27,20 +27,22 @@ const SECTION_REVEAL_PROPS = {
   transition: { duration: 0.55, ease: "easeOut" },
 };
 
-const CATEGORY_LABEL_MAP = {
-  iPhone: "Sedan",
-  Samsung: "SUV",
-  Xiaomi: "Luxury",
-};
+const PRICE_FILTER_OPTIONS = [250, 300, 350, 400, 450, 500];
 
-const ROOM_TYPE_OPTIONS = ["Sedan", "SUV", "Luxury"];
-
-const PRICE_FILTER_OPTIONS = [
-  { value: "all", label: "Any price" },
-  { value: "0-120", label: "Up to $120" },
-  { value: "121-220", label: "$121 - $220" },
-  { value: "221+", label: "$221+" },
+const FEATURE_LABELS = [
+  "Air Conditioning",
+  "GPS",
+  "Bluetooth",
+  "Parking Sensors",
+  "Rear Camera",
+  "Cruise Control",
 ];
+
+const LEGACY_TYPE_MAP = {
+  iphone: "Sedan",
+  samsung: "SUV",
+  xiaomi: "Luxury",
+};
 
 /** Extract a URL string from an image that may be a string or {url, description} object. */
 function extractImageUrl(entry) {
@@ -102,45 +104,21 @@ function buildSalesSignal(product) {
   return 12 + (seed % 37);
 }
 
-function getDisplayRoomType(brand) {
-  return CATEGORY_LABEL_MAP[brand] || String(brand || "Sedan");
+function getCarTypeLabel(product) {
+  const legacyCandidate = String(product?.brand || "").trim().toLowerCase();
+  return LEGACY_TYPE_MAP[legacyCandidate] || "Sedan";
 }
 
-function buildRoomRating(product) {
+function buildCarRating(product) {
   const signal = buildSalesSignal(product);
   const rating = 3.8 + ((signal % 12) / 10);
   return Number(rating.toFixed(1));
 }
 
-function buildRoomAmenities(product) {
+function buildCarFeatures(product) {
   const signal = buildSalesSignal(product);
-  const roomType = getDisplayRoomType(product?.brand);
 
-  return {
-    wifi: true,
-    ac: signal % 2 === 0 || roomType === "Deluxe Room" || roomType === "Suite",
-    breakfast: signal % 3 !== 0 || roomType === "Suite",
-  };
-}
-
-function matchesPriceRange(price, selectedRange) {
-  if (selectedRange === "all") {
-    return true;
-  }
-
-  if (selectedRange === "0-120") {
-    return price <= 120;
-  }
-
-  if (selectedRange === "121-220") {
-    return price >= 121 && price <= 220;
-  }
-
-  if (selectedRange === "221+") {
-    return price >= 221;
-  }
-
-  return true;
+  return FEATURE_LABELS.filter((_, index) => (signal + index) % 2 === 0).slice(0, 4);
 }
 
 function useAllProducts() {
@@ -382,11 +360,10 @@ const ProductCard = memo(function ProductCard({ product, onBookNow, index = 0, c
   const oldPriceNumber = parsePriceNumber(product.oldPrice);
   const hasDiscount = oldPriceNumber > 0 && oldPriceNumber > priceNumber;
   const bookingsThisMonth = buildSalesSignal(product);
-  const ratingValue = buildRoomRating(product);
-  const filledStars = Math.max(1, Math.min(5, Math.round(ratingValue)));
-  const ratingStars = `${"★".repeat(filledStars)}${"☆".repeat(5 - filledStars)}`;
-  const roomType = getDisplayRoomType(product.brand);
-  const roomsLeft = hasNumericStock ? stockValue : null;
+  const ratingValue = buildCarRating(product);
+  const carType = getCarTypeLabel(product);
+  const carFeatures = buildCarFeatures(product);
+  const carsLeft = hasNumericStock ? stockValue : null;
   const [isAdding, setIsAdding] = useState(false);
 
   const handleBookNow = useCallback(() => {
@@ -420,29 +397,38 @@ const ProductCard = memo(function ProductCard({ product, onBookNow, index = 0, c
         {/* Badge Group */}
         <div className="badges">
           <span className={`badge ${outOfStock ? "badge-limited" : "available"}`}>
-            {outOfStock ? "Unavailable" : "Available"}
+            {outOfStock ? "Booked" : "Available now"}
           </span>
-          {hasNumericStock && roomsLeft <= 2 && (
-            <span className="badge badge-limited" title={`Only ${roomsLeft} cars left`}>
-              Limited: {roomsLeft} left
+          {hasNumericStock && carsLeft <= 2 && (
+            <span className="badge badge-limited" title={`Only ${carsLeft} cars left`}>
+              Limited: {carsLeft} left
             </span>
           )}
           <span className="badge verified" title="Verified rental">
             Verified
           </span>
         </div>
+        <div className="car-card-overlay" />
 
       </div>
 
       {/* Product Info */}
       <div className="product-info car-info">
-        <p className="room-type-label">{roomType}</p>
+        <p className="car-type-label">{carType}</p>
         <h3>{name}</h3>
 
         {/* Product Rating */}
         <div className="product-rating" aria-label={`Rated ${ratingValue} out of 5 stars`}>
-          <span className="stars">{ratingStars}</span>
+          <span className="stars">{ratingValue} / 5</span>
           <span>({buildSalesSignal(product)} reviews)</span>
+        </div>
+
+        <div className="car-feature-icons" aria-label="Car features">
+          {carFeatures.map((feature) => (
+            <span className="car-feature-chip" key={`${product.id}-${feature}`} title={feature}>
+              {feature}
+            </span>
+          ))}
         </div>
 
         {/* Trust Indicators */}
@@ -456,15 +442,15 @@ const ProductCard = memo(function ProductCard({ product, onBookNow, index = 0, c
           <p className="booking-stat">
             <strong>{bookingsThisMonth}</strong> booked this month
           </p>
-          {roomsLeft !== null && (
+          {carsLeft !== null && (
             <p className="booking-stat">
-              {roomsLeft <= 2 ? (
+              {carsLeft <= 2 ? (
                 <span style={{ color: 'var(--danger)' }}>
-                  <strong>{roomsLeft}</strong> car{roomsLeft !== 1 ? 's' : ''} left
+                  <strong>{carsLeft}</strong> car{carsLeft !== 1 ? 's' : ''} left
                 </span>
               ) : (
                 <span>
-                  <strong>{roomsLeft}</strong> car{roomsLeft !== 1 ? 's' : ''} available
+                  <strong>{carsLeft}</strong> car{carsLeft !== 1 ? 's' : ''} available
                 </span>
               )}
             </p>
@@ -476,15 +462,10 @@ const ProductCard = memo(function ProductCard({ product, onBookNow, index = 0, c
 
         {/* Product Actions */}
         <div className="product-actions">
-          <div className="product-pricing">
-            <p className="product-price-label">Price per day</p>
-            <div className="product-price">
-              <span className="product-price-currency">$</span>
-              {priceNumber}
-              <span className="product-price-period">/day</span>
-            </div>
+          <div className="product-pricing premium-pricing-block">
+            <div className="product-price price-inline">${priceNumber} / day</div>
             {hasDiscount && (
-              <p className="product-old-price">${oldPriceNumber}/day</p>
+              <p className="product-old-price">${oldPriceNumber} / day</p>
             )}
           </div>
           <button
@@ -503,115 +484,182 @@ const ProductCard = memo(function ProductCard({ product, onBookNow, index = 0, c
   );
 });
 
-
-const FiltersSidebar = memo(function FiltersSidebar({
-  priceRange,
-  onPriceRangeChange,
-  selectedRoomTypes,
-  onToggleRoomType,
-  minimumRating,
-  onMinimumRatingChange,
-  amenityFilters,
-  onToggleAmenity,
+const FilterDropdown = memo(function FilterDropdown({
+  menuKey,
+  isOpen,
+  label,
+  options,
+  onToggle,
+  onSelect,
 }) {
+  const [showScrollHint, setShowScrollHint] = useState(false);
+  const menuScrollRef = useRef(null);
+
+  const updateScrollHint = useCallback(() => {
+    const container = menuScrollRef.current;
+    if (!container) {
+      setShowScrollHint(false);
+      return;
+    }
+
+    const hasMoreBelow = container.scrollTop + container.clientHeight < container.scrollHeight - 6;
+    setShowScrollHint(hasMoreBelow);
+  }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setShowScrollHint(false);
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      updateScrollHint();
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [isOpen, updateScrollHint]);
+
   return (
-    <aside className="hotel-filter-sidebar" aria-label="Car filters">
-      <div className="hotel-filter-group">
-        <h3>Price range</h3>
-        <div className="hotel-filter-stack">
-          {PRICE_FILTER_OPTIONS.map((option) => (
-            <label key={option.value} className="hotel-filter-check">
-              <input
-                type="radio"
-                name="price-range"
-                checked={priceRange === option.value}
-                onChange={() => onPriceRangeChange(option.value)}
-              />
-              <span>{option.label}</span>
-            </label>
-          ))}
-        </div>
+    <div className="top-filter-dropdown">
+      <button
+        type="button"
+        className={`top-filter-trigger ${isOpen ? "is-open" : ""}`}
+        onClick={() => onToggle(menuKey)}
+      >
+        <span className="top-filter-trigger-label">{label}</span>
+        <span className={`top-filter-trigger-arrow ${isOpen ? "is-open" : ""}`}>▾</span>
+      </button>
+
+      <AnimatePresence>
+        {isOpen ? (
+          <motion.div
+            className="top-filter-menu top-filter-menu--enhanced"
+            initial={{ opacity: 0, y: 10, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.985 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
+            <div className="top-filter-menu-scroll" ref={menuScrollRef} onScroll={updateScrollHint}>
+              {options.map((option) => (
+                <button
+                  type="button"
+                  key={option.value}
+                  className={`top-filter-option ${option.isSelected ? "is-selected" : ""}`}
+                  onClick={() => onSelect(option.value)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <div className={`top-filter-scroll-indicator ${showScrollHint ? "is-visible" : ""}`}>
+              <span className="top-filter-scroll-fade" aria-hidden="true" />
+              <span className="top-filter-scroll-arrow" aria-hidden="true">↓</span>
+            </div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
+    </div>
+  );
+});
+
+
+const TopFilterBar = memo(function TopFilterBar({
+  searchTerm,
+  onSearchChange,
+  selectedPrice,
+  onPriceSelect,
+  selectedBrand,
+  onBrandSelect,
+  brandOptions,
+  onSearchClick,
+}) {
+  const [openMenu, setOpenMenu] = useState("");
+  const filterBarRef = useRef(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event) => {
+      if (!filterBarRef.current?.contains(event.target)) {
+        setOpenMenu("");
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  const toggleMenu = (menuName) => {
+    setOpenMenu((currentMenu) => (currentMenu === menuName ? "" : menuName));
+  };
+
+  const handlePriceSelection = (priceValue) => {
+    onPriceSelect(priceValue);
+    setOpenMenu("");
+  };
+
+  const handleBrandSelection = (brandValue) => {
+    onBrandSelect(brandValue);
+    setOpenMenu("");
+  };
+
+  const priceOptions = useMemo(() => {
+    const options = [{ value: "all", label: "All Prices" }, ...PRICE_FILTER_OPTIONS.map((price) => ({
+      value: price,
+      label: `${price} DH`,
+    }))];
+
+    return options.map((option) => ({
+      ...option,
+      isSelected: selectedPrice === option.value,
+    }));
+  }, [selectedPrice]);
+
+  const brandMenuOptions = useMemo(() => {
+    const options = [{ value: "all", label: "All Brands" }, ...brandOptions.map((brand) => ({
+      value: brand,
+      label: brand,
+    }))];
+
+    return options.map((option) => ({
+      ...option,
+      isSelected: selectedBrand === option.value,
+    }));
+  }, [brandOptions, selectedBrand]);
+
+  return (
+    <div className="top-filter-bar" ref={filterBarRef}>
+      <div className="top-filter-search-wrap">
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(event) => onSearchChange(event.target.value)}
+          className="top-filter-search"
+          placeholder="Search by car name"
+          aria-label="Search by car name"
+        />
       </div>
 
-      <div className="hotel-filter-group">
-        <h3>Room type</h3>
-        <div className="hotel-filter-stack">
-          {ROOM_TYPE_OPTIONS.map((roomType) => (
-            <label key={roomType} className="hotel-filter-check">
-              <input
-                type="checkbox"
-                checked={selectedRoomTypes.includes(roomType)}
-                onChange={() => onToggleRoomType(roomType)}
-              />
-              <span>{roomType}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+      <FilterDropdown
+        menuKey="price"
+        isOpen={openMenu === "price"}
+        label={selectedPrice === "all" ? "All Prices" : `${selectedPrice} DH`}
+        options={priceOptions}
+        onToggle={toggleMenu}
+        onSelect={handlePriceSelection}
+      />
 
-      <div className="hotel-filter-group">
-        <h3>Rating</h3>
-        <div className="hotel-filter-stack">
-          <label className="hotel-filter-check">
-            <input
-              type="radio"
-              name="rating-min"
-              checked={minimumRating === 4}
-              onChange={() => onMinimumRatingChange(4)}
-            />
-            <span>4+ stars</span>
-          </label>
-          <label className="hotel-filter-check">
-            <input
-              type="radio"
-              name="rating-min"
-              checked={minimumRating === 3}
-              onChange={() => onMinimumRatingChange(3)}
-            />
-            <span>3+ stars</span>
-          </label>
-          <label className="hotel-filter-check">
-            <input
-              type="radio"
-              name="rating-min"
-              checked={minimumRating === 0}
-              onChange={() => onMinimumRatingChange(0)}
-            />
-            <span>Any rating</span>
-          </label>
-        </div>
-      </div>
+      <FilterDropdown
+        menuKey="brand"
+        isOpen={openMenu === "brand"}
+        label={selectedBrand === "all" ? "All Brands" : selectedBrand}
+        options={brandMenuOptions}
+        onToggle={toggleMenu}
+        onSelect={handleBrandSelection}
+      />
 
-      <div className="hotel-filter-group">
-        <h3>Amenities</h3>
-        <div className="hotel-filter-stack">
-          <label className="hotel-filter-check">
-            <input
-              type="checkbox"
-              checked={amenityFilters.wifi}
-              onChange={() => onToggleAmenity("wifi")}
-            />
-            <span>WiFi</span>
-          </label>
-          <label className="hotel-filter-check">
-            <input
-              type="checkbox"
-              checked={amenityFilters.ac}
-              onChange={() => onToggleAmenity("ac")}
-            />
-            <span>AC</span>
-          </label>
-          <label className="hotel-filter-check">
-            <input
-              type="checkbox"
-              checked={amenityFilters.breakfast}
-              onChange={() => onToggleAmenity("breakfast")}
-            />
-            <span>Breakfast</span>
-          </label>
-        </div>
-      </div>
-    </aside>
+      <button type="button" className="top-filter-search-btn" onClick={onSearchClick}>
+        Search
+      </button>
+    </div>
   );
 });
 
@@ -738,58 +786,26 @@ function Store() {
   const { products, loading, error } = useAllProducts();
   const { count } = useCart();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState("All");
-  const [priceRange, setPriceRange] = useState("all");
-  const [selectedRoomTypes, setSelectedRoomTypes] = useState([]);
-  const [minimumRating, setMinimumRating] = useState(0);
-  const [amenityFilters, setAmenityFilters] = useState({ wifi: false, ac: false, breakfast: false });
-  const [sortBy, setSortBy] = useState("popular");
+  const [selectedPrice, setSelectedPrice] = useState("all");
+  const [selectedBrand, setSelectedBrand] = useState("all");
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState("success");
-  const [pickupDate, setPickupDate] = useState("");
-  const [returnDate, setReturnDate] = useState("");
-  const [pickupLocation, setPickupLocation] = useState("");
   const deferredSearchTerm = useDeferredValue(searchTerm);
 
   const handleSearchChange = useCallback((value) => {
     setSearchTerm(value);
   }, []);
 
-  const handleBrandChange = useCallback((brand) => {
-    setSelectedBrand(brand);
-  }, []);
-
-  const handleToggleRoomType = useCallback((roomType) => {
-    setSelectedRoomTypes((currentTypes) => (
-      currentTypes.includes(roomType)
-        ? currentTypes.filter((entry) => entry !== roomType)
-        : [...currentTypes, roomType]
-    ));
-  }, []);
-
-  const handleToggleAmenity = useCallback((amenityKey) => {
-    setAmenityFilters((currentAmenities) => ({
-      ...currentAmenities,
-      [amenityKey]: !currentAmenities[amenityKey],
-    }));
-  }, []);
-
   const handleSearchSuggestionSelect = useCallback((suggestion) => {
     setSearchTerm(suggestion);
   }, []);
 
-  const handleHeroSearchSubmit = useCallback((event) => {
-    event.preventDefault();
-
-    if (pickupLocation.trim().length > 0) {
-      setSearchTerm(pickupLocation.trim());
-    }
-
+  const handleHeroSearchClick = useCallback(() => {
     const catalogueSection = document.getElementById("catalogue");
     if (catalogueSection) {
       catalogueSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [pickupLocation]);
+  }, []);
 
   const handleStartBooking = useCallback(() => {
     const catalogueSection = document.getElementById("catalogue");
@@ -835,49 +851,35 @@ function Store() {
   }, [navigate]);
 
   const brandOptions = useMemo(() => {
-    const uniqueBrands = Array.from(new Set(products.map((product) => product.brand).filter(Boolean)));
-    return ["All", ...uniqueBrands];
+    return Array.from(
+      new Set(
+        products
+          .map((product) => String(product?.brand || "").trim())
+          .filter(Boolean)
+      )
+    ).sort((firstBrand, secondBrand) => firstBrand.localeCompare(secondBrand));
   }, [products]);
 
   const filteredProducts = useMemo(() => {
     const normalizedSearch = deferredSearchTerm.trim().toLowerCase();
 
     return products.filter((product) => {
-      const matchesBrand = selectedBrand === "All" || product.brand === selectedBrand;
       const safeName = String(product?.name || "").toLowerCase();
-      const safeDescription = String(product?.description || "").toLowerCase();
-      const roomType = getDisplayRoomType(product.brand);
-      const roomRating = buildRoomRating(product);
-      const roomAmenities = buildRoomAmenities(product);
-      const roomPrice = parsePriceNumber(product.price);
-      const matchesSearch =
-        !normalizedSearch ||
-        safeName.includes(normalizedSearch) ||
-        safeDescription.includes(normalizedSearch);
+      const carPrice = parsePriceNumber(product.price);
+      const productBrand = String(product?.brand || "").trim();
+      const matchesSearch = !normalizedSearch || safeName.includes(normalizedSearch);
+      const matchesPrice = selectedPrice === "all" || carPrice <= selectedPrice;
+      const matchesBrand = selectedBrand === "all" || productBrand === selectedBrand;
 
-      const matchesPrice = matchesPriceRange(roomPrice, priceRange);
-      const matchesRoomType = selectedRoomTypes.length === 0 || selectedRoomTypes.includes(roomType);
-      const matchesRating = minimumRating === 0 || roomRating >= minimumRating;
-      const matchesAmenities = Object.entries(amenityFilters)
-        .every(([amenityKey, isRequired]) => !isRequired || roomAmenities[amenityKey]);
-
-      return matchesBrand && matchesSearch && matchesPrice && matchesRoomType && matchesRating && matchesAmenities;
+      return matchesSearch && matchesPrice && matchesBrand;
     });
-  }, [amenityFilters, deferredSearchTerm, minimumRating, priceRange, products, selectedBrand, selectedRoomTypes]);
+  }, [deferredSearchTerm, products, selectedBrand, selectedPrice]);
 
   const sortedCatalogueProducts = useMemo(() => {
-    return [...filteredProducts].sort((firstRoom, secondRoom) => {
-      if (sortBy === "price") {
-        return parsePriceNumber(firstRoom.price) - parsePriceNumber(secondRoom.price);
-      }
-
-      if (sortBy === "rating") {
-        return buildRoomRating(secondRoom) - buildRoomRating(firstRoom);
-      }
-
-      return buildSalesSignal(secondRoom) - buildSalesSignal(firstRoom);
+    return [...filteredProducts].sort((firstCar, secondCar) => {
+      return buildSalesSignal(secondCar) - buildSalesSignal(firstCar);
     });
-  }, [filteredProducts, sortBy]);
+  }, [filteredProducts]);
 
   const searchSuggestions = useMemo(() => {
     const normalized = searchTerm.trim().toLowerCase();
@@ -896,11 +898,8 @@ function Store() {
 
   const hasFilters =
     searchTerm.trim().length > 0 ||
-    selectedBrand !== "All" ||
-    priceRange !== "all" ||
-    selectedRoomTypes.length > 0 ||
-    minimumRating > 0 ||
-    Object.values(amenityFilters).some(Boolean);
+    selectedPrice !== "all" ||
+    selectedBrand !== "all";
 
   return (
     <motion.main
@@ -952,47 +951,24 @@ function Store() {
             </button>
           </div>
 
-          <motion.form
-            className="lux-hero-search"
-            onSubmit={handleHeroSearchSubmit}
+          <motion.div
+            className="lux-hero-search-wrap"
             aria-label="Find rental cars"
             initial={{ opacity: 0, y: 28 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.55, ease: "easeOut", delay: 0.28 }}
           >
-            <label className="lux-search-field">
-              <span>Pick-up date</span>
-              <input
-                type="date"
-                value={pickupDate}
-                onChange={(event) => setPickupDate(event.target.value)}
-              />
-            </label>
-
-            <label className="lux-search-field">
-              <span>Return date</span>
-              <input
-                type="date"
-                min={pickupDate || undefined}
-                value={returnDate}
-                onChange={(event) => setReturnDate(event.target.value)}
-              />
-            </label>
-
-            <label className="lux-search-field">
-              <span>Location</span>
-              <input
-                type="text"
-                value={pickupLocation}
-                onChange={(event) => setPickupLocation(event.target.value)}
-                placeholder="Casablanca, Rabat, Marrakech"
-              />
-            </label>
-
-            <button type="submit" className="lux-search-submit">
-              Search
-            </button>
-          </motion.form>
+            <TopFilterBar
+              searchTerm={searchTerm}
+              onSearchChange={handleSearchChange}
+              selectedPrice={selectedPrice}
+              onPriceSelect={setSelectedPrice}
+              selectedBrand={selectedBrand}
+              onBrandSelect={setSelectedBrand}
+              brandOptions={brandOptions}
+              onSearchClick={handleHeroSearchClick}
+            />
+          </motion.div>
         </motion.div>
       </motion.section>
 
@@ -1007,37 +983,10 @@ function Store() {
       >
         <div className="storefront-toolbar-header">
           <div>
-            <h2 className="storefront-toolbar-title">Available Cars</h2>
+            <h2 className="storefront-toolbar-title">Find Your Next Car</h2>
             <p className="storefront-toolbar-count">
               {filteredProducts.length} {filteredProducts.length === 1 ? "car" : "cars"} found
             </p>
-          </div>
-
-          <div className="storefront-toolbar-controls">
-            <div className="storefront-brand-filters" role="group" aria-label="Filter cars by category">
-              {brandOptions.map((brand) => (
-                <motion.button
-                  key={brand}
-                  type="button"
-                  className={`storefront-filter-btn ${selectedBrand === brand ? "active" : ""}`}
-                  onClick={() => handleBrandChange(brand)}
-                  aria-pressed={selectedBrand === brand}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  {brand === "All" ? "All Cars" : (CATEGORY_LABEL_MAP[brand] || brand)}
-                </motion.button>
-              ))}
-            </div>
-
-            <label className="hotel-sort-select" aria-label="Sort cars">
-              <span>Sort by</span>
-              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-                <option value="price">Price low to high</option>
-                <option value="rating">Rating</option>
-                <option value="popular">Popular</option>
-              </select>
-            </label>
           </div>
         </div>
       </motion.section>
@@ -1053,7 +1002,7 @@ function Store() {
       ) : null}
 
       {!loading && !error && availableCatalogueProducts.length > 0 ? (
-        <motion.section className="storefront-section panel hotel-catalog-layout section" id="catalogue" {...SECTION_REVEAL_PROPS}>
+        <motion.section className="storefront-section panel section" id="catalogue" {...SECTION_REVEAL_PROPS}>
           <div className="storefront-section-head">
             <div>
               <p className="storefront-section-kicker">Rental cars</p>
@@ -1062,27 +1011,14 @@ function Store() {
             <p>{availableCatalogueProducts.length} cars</p>
           </div>
 
-          <div className="hotel-catalog-content">
-            <FiltersSidebar
-              priceRange={priceRange}
-              onPriceRangeChange={setPriceRange}
-              selectedRoomTypes={selectedRoomTypes}
-              onToggleRoomType={handleToggleRoomType}
-              minimumRating={minimumRating}
-              onMinimumRatingChange={setMinimumRating}
-              amenityFilters={amenityFilters}
-              onToggleAmenity={handleToggleAmenity}
-            />
-
-            <div className="storefront-grid hotel-results-grid">
-              {availableCatalogueProducts.map((product) => (
-                <ProductCard
-                  key={`catalogue-${product.routeKey}`}
-                  product={product}
-                  onBookNow={handleBookNow}
-                />
-              ))}
-            </div>
+          <div className="storefront-grid car-results-grid">
+            {availableCatalogueProducts.map((product) => (
+              <ProductCard
+                key={`catalogue-${product.routeKey}`}
+                product={product}
+                onBookNow={handleBookNow}
+              />
+            ))}
           </div>
         </motion.section>
       ) : null}

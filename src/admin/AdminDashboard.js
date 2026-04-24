@@ -95,7 +95,7 @@ function normalizeProductImages(product) {
 
           return {
             url: normalizedUrl,
-            description: getDefaultImageDescription(index, product?.name || "Room"),
+            description: getDefaultImageDescription(index, product?.name || "Car"),
           };
         }
 
@@ -452,10 +452,6 @@ function Admin() {
     return () => unsubscribe();
   }, [addToast]);
 
-  useEffect(() => {
-    console.log(formData.carTypes);
-  }, [formData.carTypes]);
-
   const revokeObjectUrls = useCallback((entries) => {
     entries.forEach((entry) => {
       if (entry?.isObjectUrl && typeof entry?.url === "string") {
@@ -480,7 +476,7 @@ function Admin() {
     });
   }, [products, searchTerm, brandFilter]);
 
-  const roomTypeOptions = useMemo(() => formData.carTypes, [formData.carTypes]);
+  const carTypeOptions = useMemo(() => formData.carTypes, [formData.carTypes]);
 
   const dashboardStats = useMemo(() => {
     const outOfStockCount = products.filter((product) => product.stock === "Out of stock").length;
@@ -555,7 +551,7 @@ function Admin() {
         : String(imageEntry?.url || imageEntry?.imageUrl || imageEntry?.src || "").trim() || PLACEHOLDER_IMAGE,
       description: typeof imageEntry === "object" && imageEntry?.description
         ? String(imageEntry.description)
-        : getDefaultImageDescription(index, product?.name || "Room"),
+        : getDefaultImageDescription(index, product?.name || "Car"),
       file: null,
       isObjectUrl: false,
     }));
@@ -778,7 +774,6 @@ function Admin() {
 
     setFormData((prev) => {
       const nextCarTypes = prev.carTypes.filter((_, index) => index !== indexToRemove);
-      console.log(nextCarTypes);
       return {
         ...prev,
         carTypes: nextCarTypes,
@@ -830,7 +825,7 @@ function Admin() {
           preparedEntries.push({
             id: imageEntry.id,
             url: imageEntry.url.trim(),
-            description: String(imageEntry.description || getDefaultImageDescription(preparedEntries.length, form.name.trim() || "Room")),
+            description: String(imageEntry.description || getDefaultImageDescription(preparedEntries.length, form.name.trim() || "Car")),
           });
         }
       }
@@ -1052,14 +1047,14 @@ function Admin() {
                       onChange={(event) => handleSelectType(event.target.value)}
                     >
                       <option value="">Select car type</option>
-                      {roomTypeOptions.map((roomType) => (
-                        <option key={roomType} value={roomType}>{formatCarTypeLabel(roomType)}</option>
+                      {carTypeOptions.map((carType) => (
+                        <option key={carType} value={carType}>{formatCarTypeLabel(carType)}</option>
                       ))}
                     </select>
                   </InputField>
                 </div>
 
-                <div className="room-type-add-row">
+                <div className="car-type-add-row">
                   <input
                     type="text"
                     value={newType}
@@ -1075,7 +1070,7 @@ function Admin() {
                   />
                   <button
                     type="button"
-                    className="add-room-type-btn"
+                    className="add-car-type-btn"
                     onClick={handleAddCarType}
                     disabled={!newType.trim()}
                   >
@@ -1409,7 +1404,7 @@ function Admin() {
                 aria-label="Filter by car type"
               >
                 <option value="All">All Car Types</option>
-                {roomTypeOptions.map((carType) => (
+                {carTypeOptions.map((carType) => (
                   <option key={carType} value={carType}>{formatCarTypeLabel(carType)}</option>
                 ))}
               </select>
@@ -1489,7 +1484,7 @@ function Admin() {
                               type="button"
                               className="action-btn edit-btn"
                               onClick={() => openEditModal(product)}
-                              title="Edit room"
+                              title="Edit car"
                             >
                               Edit
                             </button>
@@ -1498,7 +1493,7 @@ function Admin() {
                               className="action-btn delete-btn"
                               onClick={() => handleDelete(product)}
                               disabled={deletingId === product.id}
-                              title="Delete room"
+                              title="Delete car"
                             >
                               {deletingId === product.id ? "Removing..." : "Delete"}
                             </button>

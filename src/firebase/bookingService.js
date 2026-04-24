@@ -166,8 +166,6 @@ export async function createBooking(payload) {
     const bookingId = docRef.id;
     setCachedBooking(bookingId, bookingData);
 
-    console.log("✅ Booking created:", bookingId);
-
     return {
       success: true,
       error: null,

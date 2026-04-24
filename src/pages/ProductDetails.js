@@ -3,6 +3,8 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaWhatsapp } from "react-icons/fa";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { subscribeCarById } from "../firebase/cars";
 import Navbar from "../components/Navbar";
 import ProductGallery from "../components/ProductGallery";
@@ -17,6 +19,39 @@ const DEFAULT_IMAGE_DESCRIPTIONS = [
   "Side view",
   "Dashboard",
 ];
+
+function toStartOfDay(dateValue) {
+  if (!(dateValue instanceof Date) || Number.isNaN(dateValue.getTime())) {
+    return null;
+  }
+
+  const nextDate = new Date(dateValue);
+  nextDate.setHours(0, 0, 0, 0);
+  return nextDate;
+}
+
+function addDays(dateValue, dayCount) {
+  const normalizedDate = toStartOfDay(dateValue);
+  if (!normalizedDate) {
+    return null;
+  }
+
+  const nextDate = new Date(normalizedDate);
+  nextDate.setDate(nextDate.getDate() + dayCount);
+  return nextDate;
+}
+
+function formatDateForBooking(dateValue) {
+  const normalizedDate = toStartOfDay(dateValue);
+  if (!normalizedDate) {
+    return "";
+  }
+
+  const year = normalizedDate.getFullYear();
+  const month = String(normalizedDate.getMonth() + 1).padStart(2, "0");
+  const day = String(normalizedDate.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 function parsePriceNumber(priceValue) {
   const normalized = String(priceValue ?? "0").replace(/[^0-9.]/g, "");
@@ -47,7 +82,7 @@ function isOutOfStock(stockValue) {
   return String(stockValue ?? "").trim().toLowerCase().includes("out");
 }
 
-function getRoomTypeLabel(brandValue) {
+function getCarTypeLabel(brandValue) {
   const normalized = String(brandValue || "").trim().toLowerCase();
 
   if (normalized === "iphone") {
@@ -65,8 +100,8 @@ function getRoomTypeLabel(brandValue) {
   return String(brandValue || "Sedan");
 }
 
-function toGalleryImage(entry, index, roomName) {
-  const fallbackDescription = DEFAULT_IMAGE_DESCRIPTIONS[index] || `${roomName || "Room"} view ${index + 1}`;
+function toGalleryImage(entry, index, carName) {
+  const fallbackDescription = DEFAULT_IMAGE_DESCRIPTIONS[index] || `${carName || "Car"} view ${index + 1}`;
 
   if (typeof entry === "string") {
     return {
@@ -161,18 +196,113 @@ const DetailSkeleton = memo(function DetailSkeleton() {
   );
 });
 
+const BookingDateField = memo(function BookingDateField({
+  label,
+  selectedDate,
+  onChange,
+  onClear,
+  minDate,
+  startDate,
+  endDate,
+  selectsStart = false,
+  selectsEnd = false,
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleTodayClick = useCallback(() => {
+    const todayDate = toStartOfDay(new Date());
+    if (!todayDate) {
+      return;
+    }
+
+    const boundedToday = minDate && todayDate < minDate ? minDate : todayDate;
+    onChange(boundedToday);
+    setIsOpen(false);
+  }, [minDate, onChange]);
+
+  const handleClearClick = useCallback(() => {
+    onClear();
+    setIsOpen(false);
+  }, [onClear]);
+
+  return (
+    <label className="storefront-field">
+      <span className="storefront-field-label">{label}</span>
+      <div className="storefront-field-wrap storefront-field-wrap--datepicker">
+        <DatePicker
+          selected={selectedDate}
+          onChange={(nextDate) => onChange(toStartOfDay(nextDate))}
+          minDate={minDate}
+          startDate={startDate}
+          endDate={endDate}
+          selectsStart={selectsStart}
+          selectsEnd={selectsEnd}
+          shouldCloseOnSelect
+          onInputClick={() => setIsOpen(true)}
+          onCalendarOpen={() => setIsOpen(true)}
+          onCalendarClose={() => setIsOpen(false)}
+          onClickOutside={() => setIsOpen(false)}
+          open={isOpen}
+          dateFormat="yyyy-MM-dd"
+          placeholderText="YYYY-MM-DD"
+          className="storefront-datepicker-input"
+          calendarClassName="storefront-datepicker-calendar"
+          popperClassName="storefront-datepicker-popper"
+          showPopperArrow={false}
+          dayClassName={(dayDate) => {
+            const day = toStartOfDay(dayDate);
+            if (!day) {
+              return undefined;
+            }
+
+            if (startDate && endDate && day > startDate && day < endDate) {
+              return "storefront-datepicker-day-in-range";
+            }
+
+            return undefined;
+          }}
+          calendarContainer={({ className, children }) => (
+            <div className={`${className} storefront-datepicker-shell`}>
+              {children}
+              <div className="storefront-datepicker-actions">
+                <button
+                  type="button"
+                  className="storefront-datepicker-action-btn"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={handleTodayClick}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  className="storefront-datepicker-action-btn is-clear"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={handleClearClick}
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
+        />
+      </div>
+    </label>
+  );
+});
+
 function ProductDetails() {
   const { ownerId, productId, id } = useParams();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cartMessage, setCartMessage] = useState("");
-  const [checkInDate, setCheckInDate] = useState("");
-  const [checkOutDate, setCheckOutDate] = useState("");
+  const [checkInDate, setCheckInDate] = useState(null);
+  const [checkOutDate, setCheckOutDate] = useState(null);
   const [bookingName, setBookingName] = useState("");
   const [bookingPhone, setBookingPhone] = useState("");
   const [bookingAddress, setBookingAddress] = useState("");
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const todayDate = useMemo(() => toStartOfDay(new Date()), []);
 
   // Auto-clear booking error message after 6 seconds
   useEffect(() => {
@@ -244,19 +374,35 @@ function ProductDetails() {
   const productStock = useMemo(() => parseStockQuantity(product?.stock), [product?.stock]);
   const outOfStock = useMemo(() => isOutOfStock(product?.stock), [product?.stock]);
   const priceNumber = useMemo(() => parsePriceNumber(product?.price), [product?.price]);
+  const minReturnDate = useMemo(() => {
+    if (checkInDate) {
+      return addDays(checkInDate, 1);
+    }
+
+    return addDays(todayDate, 1);
+  }, [checkInDate, todayDate]);
+
+  const handleCheckInChange = useCallback((nextDate) => {
+    setCheckInDate(nextDate);
+    setCheckOutDate((currentDate) => {
+      if (!currentDate || !nextDate) {
+        return currentDate;
+      }
+
+      return currentDate <= nextDate ? null : currentDate;
+    });
+  }, []);
+
+  const handleCheckOutChange = useCallback((nextDate) => {
+    setCheckOutDate(nextDate);
+  }, []);
+
   const bookingDays = useMemo(() => {
     if (!checkInDate || !checkOutDate) {
       return 0;
     }
 
-    const start = new Date(checkInDate);
-    const end = new Date(checkOutDate);
-
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-      return 0;
-    }
-
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const days = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
     return days > 0 ? days : 0;
   }, [checkInDate, checkOutDate]);
   const bookingTotalPrice = useMemo(() => priceNumber * bookingDays, [priceNumber, bookingDays]);
@@ -265,7 +411,7 @@ function ProductDetails() {
       return false;
     }
 
-    return new Date(checkOutDate) <= new Date(checkInDate);
+    return checkOutDate <= checkInDate;
   }, [checkInDate, checkOutDate]);
   const handleBookOnWhatsApp = useCallback(() => {
     if (!bookingName.trim()) {
@@ -288,7 +434,7 @@ function ProductDetails() {
       setCartMessage("Please fill all fields");
       return;
     }
-    if (new Date(checkOutDate) <= new Date(checkInDate)) {
+    if (checkOutDate <= checkInDate) {
       setCartMessage("Return date must be after pick-up date.");
       return;
     }
@@ -303,7 +449,7 @@ function ProductDetails() {
       ? `\n\n💵 Total: ${formatCurrency(priceNumber)} x ${bookingDays} day${bookingDays > 1 ? "s" : ""} = ${formatCurrency(bookingTotalPrice)}`
       : "";
 
-    const message = `Hello, I want to book this car:\n\n🚗 Car: ${product?.name || "Car"}\n💰 Price per day: ${formatCurrency(priceNumber)}\n\n👤 Full name: ${bookingName.trim()}\n📞 Phone: ${bookingPhone.trim()}\n📍 Delivery address: ${bookingAddress.trim() || "-"}\n🗓 Rental dates: ${checkInDate} → ${checkOutDate}${totalLine}\n\nPlease confirm availability.`;
+    const message = `Hello, I want to book this car:\n\n🚗 Car: ${product?.name || "Car"}\n💰 Price per day: ${formatCurrency(priceNumber)}\n\n👤 Full name: ${bookingName.trim()}\n📞 Phone: ${bookingPhone.trim()}\n📍 Delivery address: ${bookingAddress.trim() || "-"}\n🗓 Rental dates: ${formatDateForBooking(checkInDate)} → ${formatDateForBooking(checkOutDate)}${totalLine}\n\nPlease confirm availability.`;
 
     const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
     window.open(url, "_blank");
@@ -347,7 +493,7 @@ function ProductDetails() {
     );
   }
 
-  const carTypeLabel = getRoomTypeLabel(product.brand);
+  const carTypeLabel = getCarTypeLabel(product.brand);
   const stockLabel = outOfStock
     ? "Out of stock"
     : productStock !== null && productStock < 5
@@ -458,33 +604,37 @@ function ProductDetails() {
               </div>
             </label>
             <div className="storefront-date-row">
-              <label className="storefront-field">
-                <span className="storefront-field-label">Pick-up</span>
-                <div className="storefront-field-wrap">
-                  <span className="storefront-field-icon" aria-hidden="true">📅</span>
-                  <input
-                    type="date"
-                    value={checkInDate}
-                    onChange={(event) => setCheckInDate(event.target.value)}
-                    className="storefront-datepicker-input"
-                  />
-                </div>
-              </label>
+              <BookingDateField
+                label="Pick-up date"
+                selectedDate={checkInDate}
+                onChange={handleCheckInChange}
+                onClear={() => {
+                  setCheckInDate(null);
+                  setCheckOutDate(null);
+                }}
+                minDate={todayDate}
+                startDate={checkInDate}
+                endDate={checkOutDate}
+                selectsStart
+              />
 
-              <label className="storefront-field">
-                <span className="storefront-field-label">Return</span>
-                <div className="storefront-field-wrap">
-                  <span className="storefront-field-icon" aria-hidden="true">📅</span>
-                  <input
-                    type="date"
-                    value={checkOutDate}
-                    onChange={(event) => setCheckOutDate(event.target.value)}
-                    min={checkInDate || undefined}
-                    className="storefront-datepicker-input"
-                  />
-                </div>
-              </label>
+              <BookingDateField
+                label="Return date"
+                selectedDate={checkOutDate}
+                onChange={handleCheckOutChange}
+                onClear={() => setCheckOutDate(null)}
+                minDate={minReturnDate || undefined}
+                startDate={checkInDate}
+                endDate={checkOutDate}
+                selectsEnd
+              />
             </div>
+
+            {checkInDate && checkOutDate ? (
+              <p className="storefront-selected-range">
+                Selected: {formatDateForBooking(checkInDate)} → {formatDateForBooking(checkOutDate)}
+              </p>
+            ) : null}
           </div>
 
           <div className="storefront-booking-total" aria-live="polite">
