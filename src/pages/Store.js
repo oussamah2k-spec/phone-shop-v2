@@ -29,15 +29,6 @@ const SECTION_REVEAL_PROPS = {
 
 const PRICE_FILTER_OPTIONS = [250, 300, 350, 400, 450, 500];
 
-const FEATURE_LABELS = [
-  "Air Conditioning",
-  "GPS",
-  "Bluetooth",
-  "Parking Sensors",
-  "Rear Camera",
-  "Cruise Control",
-];
-
 const LEGACY_TYPE_MAP = {
   iphone: "Sedan",
   samsung: "SUV",
@@ -91,6 +82,7 @@ function normalizePublicProduct(product) {
     brand: String(product?.brand || product?.category || "Car Type"),
     imageUrl: primaryImage,
     images: imageUrls.length > 0 ? imageUrls : [primaryImage],
+    features: normalizeFeatures(product?.features),
     featured: Boolean(product?.featured),
     stock: product?.stock || "Available",
     createdAt: product?.createdAt?.toMillis?.() || Number(product?.createdAt) || 0,
@@ -115,10 +107,14 @@ function buildCarRating(product) {
   return Number(rating.toFixed(1));
 }
 
-function buildCarFeatures(product) {
-  const signal = buildSalesSignal(product);
+function normalizeFeatures(featuresValue) {
+  if (!Array.isArray(featuresValue)) {
+    return [];
+  }
 
-  return FEATURE_LABELS.filter((_, index) => (signal + index) % 2 === 0).slice(0, 4);
+  return featuresValue
+    .map((feature) => String(feature || "").trim())
+    .filter(Boolean);
 }
 
 function useAllProducts() {
@@ -362,7 +358,7 @@ const ProductCard = memo(function ProductCard({ product, onBookNow, index = 0, c
   const bookingsThisMonth = buildSalesSignal(product);
   const ratingValue = buildCarRating(product);
   const carType = getCarTypeLabel(product);
-  const carFeatures = buildCarFeatures(product);
+  const carFeatures = normalizeFeatures(product?.features);
   const carsLeft = hasNumericStock ? stockValue : null;
   const [isAdding, setIsAdding] = useState(false);
 
@@ -423,13 +419,15 @@ const ProductCard = memo(function ProductCard({ product, onBookNow, index = 0, c
           <span>({buildSalesSignal(product)} reviews)</span>
         </div>
 
-        <div className="car-feature-icons" aria-label="Car features">
-          {carFeatures.map((feature) => (
-            <span className="car-feature-chip" key={`${product.id}-${feature}`} title={feature}>
-              {feature}
-            </span>
-          ))}
-        </div>
+        {carFeatures.length > 0 ? (
+          <div className="car-feature-icons" aria-label="Car features">
+            {carFeatures.map((feature, index) => (
+              <span className="feature-badge" key={`${product.id}-${index}`} title={feature}>
+                {feature}
+              </span>
+            ))}
+          </div>
+        ) : null}
 
         {/* Trust Indicators */}
         <div className="trust-indicators">

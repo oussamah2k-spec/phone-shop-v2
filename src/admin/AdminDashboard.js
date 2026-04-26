@@ -45,6 +45,7 @@ const initialForm = {
   oldPrice: "",
   description: "",
   brand: DEFAULT_CAR_TYPE,
+  features: [],
   stock: "Available",
   featured: false,
 };
@@ -77,6 +78,16 @@ function mapLegacyBrandToCarType(brandValue) {
   }
 
   return String(brandValue || DEFAULT_CAR_TYPE);
+}
+
+function normalizeFeatures(featuresValue) {
+  if (!Array.isArray(featuresValue)) {
+    return [];
+  }
+
+  return featuresValue
+    .map((feature) => String(feature || "").trim())
+    .filter(Boolean);
 }
 
 function formatPriceLabel(priceValue) {
@@ -152,6 +163,7 @@ const normalizeProduct = (product, fallbackId) => {
     oldPrice: product?.oldPrice || "",
     description: product?.description || "",
     brand: mapLegacyBrandToCarType(product?.brand || product?.category),
+    features: normalizeFeatures(product?.features),
     imageUrl: images[0]?.url || PLACEHOLDER_IMAGE,
     images,
     stock: product?.stock || "Available",
@@ -420,6 +432,7 @@ function Admin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState("");
   const [form, setForm] = useState(initialForm);
+  const [featureInput, setFeatureInput] = useState("");
   const [selectedImages, setSelectedImages] = useState([]);
   const [mainImageId, setMainImageId] = useState("");
   const [isImageDropActive, setIsImageDropActive] = useState(false);
@@ -518,6 +531,7 @@ function Admin() {
     setImageUrlDescriptionInput("Main car view");
     setIsUploadingImages(false);
     setUploadError("");
+    setFeatureInput("");
     setEditingId("");
     setFormErrors({});
     if (imageInputRef.current) {
@@ -572,6 +586,7 @@ function Admin() {
       oldPrice: product.oldPrice || "",
       description: product.description || "",
       brand: mapLegacyBrandToCarType(product.brand),
+      features: normalizeFeatures(product.features),
       stock: product.stock || "Available",
       featured: Boolean(product.featured),
     });
@@ -746,6 +761,35 @@ function Admin() {
     )));
   }, []);
 
+  const handleAddFeature = useCallback(() => {
+    const nextFeature = featureInput.trim();
+    if (!nextFeature) {
+      return;
+    }
+
+    setForm((prev) => {
+      const normalizedNext = nextFeature.toLowerCase();
+      const exists = normalizeFeatures(prev.features).some((feature) => feature.toLowerCase() === normalizedNext);
+      if (exists) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        features: [...normalizeFeatures(prev.features), nextFeature],
+      };
+    });
+
+    setFeatureInput("");
+  }, [featureInput]);
+
+  const handleRemoveFeature = useCallback((indexToRemove) => {
+    setForm((prev) => ({
+      ...prev,
+      features: normalizeFeatures(prev.features).filter((_, index) => index !== indexToRemove),
+    }));
+  }, []);
+
   const handleSelectType = useCallback((type) => {
     const normalizedType = normalizeCarType(type);
     setSelectedType(normalizedType);
@@ -869,6 +913,7 @@ function Admin() {
         description: String(entry.description || getDefaultImageDescription(index, form.name.trim() || "Car")),
       }));
       const imageUrl = images[0]?.url || PLACEHOLDER_IMAGE;
+      const features = normalizeFeatures(form.features);
 
       if (editingId) {
         const currentProduct = products.find((product) => product.id === editingId);
@@ -883,6 +928,7 @@ function Admin() {
           image: imageUrl,
           imageUrl,
           images,
+          features,
           stock: form.stock || "Available",
           featured: Boolean(form.featured),
           createdAt: currentProduct?.createdAt ? currentProduct.createdAt : serverTimestamp(),
@@ -906,6 +952,7 @@ function Admin() {
           image: imageUrl,
           imageUrl,
           images,
+          features,
           stock: form.stock || "Available",
           featured: Boolean(form.featured),
           userId: user?.uid || "",
@@ -1132,6 +1179,50 @@ function Admin() {
                   onChange={handleInputChange}
                   placeholder="Write a premium car summary, key comfort features, and rental highlights..."
                 />
+
+                <InputField id="features" label="Features">
+                  <div className="feature-input-group">
+                    <input
+                      id="features"
+                      name="features"
+                      type="text"
+                      value={featureInput}
+                      onChange={(event) => setFeatureInput(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          handleAddFeature();
+                        }
+                      }}
+                      placeholder="Add feature (e.g., GPS)"
+                    />
+                    <button
+                      type="button"
+                      className="add-car-type-btn"
+                      onClick={handleAddFeature}
+                      disabled={!featureInput.trim()}
+                    >
+                      Add
+                    </button>
+                  </div>
+
+                  {normalizeFeatures(form.features).length > 0 ? (
+                    <div className="feature-tags" aria-label="Selected features">
+                      {normalizeFeatures(form.features).map((feature, index) => (
+                        <span key={`${feature}-${index}`} className="feature-tag">
+                          {feature}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${feature}`}
+                            onClick={() => handleRemoveFeature(index)}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </InputField>
 
                 <div className="form-row">
                   <InputField id="stock" label="Availability">
